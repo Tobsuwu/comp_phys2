@@ -1,0 +1,12 @@
+# Problem 3, converged energies from puhti.
+
+#scf.0: 
+-63.13714300 #Ry
+#scf.1: 
+-63.60581888 #Ry
+#scf.2: 
+-63.70049255 #Ry
+#scf.3: 
+-63.65654726 #Ry
+#scf.4: 
+-63.56728769 #Ry

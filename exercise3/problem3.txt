@@ -1,0 +1,148 @@
+SCF and VMC Structure comparison
+
+<< cat scf.struct.xsf
+ CRYSTAL
+ PRIMVEC
+     3.57000000    3.57000000   -0.00000000
+     0.00000000    3.57000000    3.57000000
+     3.57000000    0.00000000    3.57000000
+ PRIMCOORD
+   16 1
+     6   3.57000000    3.57000000    0.00000000
+     6   0.89250000    0.89250000    0.89250000
+     6   1.78500000    1.78500000    0.00000000
+     6   2.67750000    2.67750000    0.89250000
+     6   0.00000000    1.78500000    1.78500000
+     6   0.89250000    2.67750000    2.67750000
+     6   1.78500000    3.57000000    1.78500000
+     6   2.67750000    4.46250000    2.67750000
+     6   1.78500000   -0.00000000    1.78500000
+     6   2.67750000    0.89250000    2.67750000
+     6   3.57000000    1.78500000    1.78500000
+     6   4.46250000    2.67750000    2.67750000
+     6   5.35500000    5.35500000    3.57000000
+     6   2.67750000    2.67750000    4.46250000
+     6   3.57000000    3.57000000    3.57000000
+     6   4.46250000    4.46250000    4.46250000
+
+<< cat vmc.struct.xsf
+ CRYSTAL
+ PRIMVEC
+     3.57000000    3.57000000    0.00000000
+    -0.00000000    3.57000000    3.57000000
+     3.57000000   -0.00000000    3.57000000
+ PRIMCOORD
+   16 1
+     6   3.57000000    3.57000000    0.00000000
+     6   0.89250000    0.89250000    0.89250000
+     6   1.78500000    1.78500000    0.00000000
+     6   2.67750000    2.67750000    0.89250000
+     6   0.00000000    1.78500000    1.78500000
+     6   0.89250000    2.67750000    2.67750000
+     6   1.78500000    3.57000000    1.78500000
+     6   2.67750000    4.46250000    2.67750000
+     6   1.78500000   -0.00000000    1.78500000
+     6   2.67750000    0.89250000    2.67750000
+     6   3.57000000    1.78500000    1.78500000
+     6   4.46250000    2.67750000    2.67750000
+     6   5.35500000    5.35500000    3.57000000
+     6   2.67750000    2.67750000    4.46250000
+     6   3.57000000    3.57000000    3.57000000
+     6   4.46250000    4.46250000    4.46250000
+
+The structures seem to be similar.
+
+qmca -e 5 -q ev *scalar.dat
+e stands for EQUILIBRATION (Equilibration length in blocks) and q stands for QUANTATIES. ev is local energy and variance.
+
+LocalEnergy               Variance           ratio 
+vmc  series 0  -87.859666 +/- 0.026437   16.705984 +/- 0.262401   0.1901 
+
+<< cat scf.out
+...
+total energy              =     -22.52257768 Ry
+estimated scf accuracy    <          4.7E-09 Ry
+
+The energy of VMC is roughly 8 times larger than SCF.
+
+-- diamond.py used in calculations
+#! /usr/bin/env python3 
+
+
+from nexus import settings,job,run_project
+from nexus import generate_physical_system
+from nexus import generate_pwscf
+from nexus import generate_pw2qmcpack
+from nexus import generate_qmcpack,vmc
+from machine_configs import get_puhti_configs
+
+settings(
+    pseudo_dir    = './pseudopotentials',
+    status_only   = 0,
+    generate_only = 0,
+    sleep         = 3,
+    machine       = 'puhti',
+    account       = 'project_2000924',
+    )
+
+dia16 = generate_physical_system(
+    units  = 'A',
+    axes   = [[ 1.785,  1.785,  0.   ],
+              [ 0.   ,  1.785,  1.785],
+              [ 1.785,  0.   ,  1.785]],
+    elem   = ['C','C'],
+    pos    = [[ 0.    ,  0.    ,  0.    ],
+              [ 0.8925,  0.8925,  0.8925]],
+    tiling = (2,2,2),
+    kgrid  = (1,1,1),
+    kshift = (0,0,0),
+    C      = 4
+    )
+
+jobs = get_puhti_configs()
+
+scf = generate_pwscf(
+    identifier   = 'scf',
+    path         = 'diamond/scf',
+    job          = jobs['scf'],
+    input_type   = 'generic',
+    calculation  = 'scf',
+    input_dft    = 'lda',
+    ecutwfc      = 200,
+    conv_thr     = 1e-8,
+    nosym        = True,
+    wf_collect   = True,
+    system       = dia16,
+    pseudos      = ['C.BFD.upf'],
+    )
+
+conv = generate_pw2qmcpack(
+    identifier   = 'conv',
+    path         = 'diamond/scf',
+    job          = jobs['conv'],
+    write_psir   = False,
+    dependencies = (scf,'orbitals'),
+    )
+
+qmc = generate_qmcpack(
+    identifier   = 'vmc',
+    path         = 'diamond/vmc',
+    job          = jobs['vmc'],
+    input_type   = 'basic',
+    system       = dia16,
+    pseudos      = ['C.BFD.xml'],
+    jastrows     = [],
+    calculations = [
+	vmc(
+            walkers     =   1,
+            warmupsteps =  20,
+            blocks      = 200,
+            steps       =  10,
+            substeps    =   2,
+            timestep    =  .4
+            )
+	],
+    dependencies = (conv,'orbitals'),
+    )
+
+run_project()

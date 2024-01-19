@@ -1,0 +1,13 @@
+ 2d Harmonic dot
+  Num of electrons            6
+  polarized 
+  omega (Ha)         4.357367329887839E-004
+  omega (eff Ha)     0.999983284542618     
+  omega (meV)         11.8570000000000     
+  T(K)                47.6642450339333     
+  T_F(K)              476.642450339333     
+  T/T_F              0.100000000000000     
+  
+  time-step         25.8788658182741     
+  Trotter number                    256
+  Notice: time-step in (E_F)**(-1)   3.906249999999999E-002

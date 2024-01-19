@@ -1,0 +1,1 @@
+Problems of the first week. Setting up the working environments and getting familiar with Hartree approximation.
